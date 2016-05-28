@@ -21,7 +21,7 @@ namespace example
     {
         void do_something_useful()
         {
-            std::cout << "This is example_plugin1" << std::endl;
+            std::cout << "This is example_plugin1!" << std::endl;
         }
     };
 }
