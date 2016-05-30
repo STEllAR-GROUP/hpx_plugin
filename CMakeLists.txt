@@ -32,7 +32,7 @@ else()
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
-include_directories(external)
+include_directories(src)
 
 # add executable
 add_hpx_executable(load_plugin
