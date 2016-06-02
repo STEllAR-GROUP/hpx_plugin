@@ -13,58 +13,20 @@
 // discovered at runtime.
 
 #include <hpx/hpx_main.hpp>
-#include <hpx/util/plugin.hpp>
+#include <hpx/hpx.hpp>
 
 #include "example_plugin_factory_base.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/tokenizer.hpp>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 ///////////////////////////////////////////////////////////////////////////////
-void load_registries(hpx::util::plugin::dll& module, hpx::util::section& ini)
-{
-    // find where the HPX core libraries are located
-    boost::filesystem::path plugin_name = hpx::util::find_prefix();
-    plugin_name /= "bin";
-    plugin_name /= "hpx";
-    plugin_name /= HPX_MAKE_DLL_STRING(std::string("hpx_loaded_plugin"));
-
-    // load shared library
-    module = hpx::util::plugin::dll(plugin_name.string());
-
-    typedef hpx::plugins::plugin_registry_base plugin_registry_base;
-
-    // create an example plugin
-    hpx::util::plugin::plugin_factory<plugin_registry_base> pf(module, "plugin");
-
-    // retrieve the names of all known registries in this shared library
-    std::vector<std::string> names;
-    pf.get_names(names);
-
-    std::vector<std::string> ini_data;
-    if (!names.empty())
-    {
-        // ask all registries
-        for (std::string const& s : names)
-        {
-            // create the plugin registry object
-            std::shared_ptr<plugin_registry_base> registry(pf.create(s));
-
-            // query the configuration information for this registry entry
-            registry->get_plugin_info(ini_data);
-        }
-    }
-
-    // incorporate all information from this module's registry into the ini
-    ini.parse("<plugin registry>", ini_data, false, false);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-bool load_plugins(hpx::util::plugin::dll& module, hpx::util::section& ini)
+bool load_plugins(hpx::util::section& ini)
 {
     // load all components as described in the configuration information
     if (!ini.has_section("hpx.plugins"))
@@ -130,34 +92,56 @@ bool load_plugins(hpx::util::plugin::dll& module, hpx::util::section& ini)
         if (ini.has_section(plugin_section))
             plugin_ini = ini.get_section(plugin_section);
 
+        boost::filesystem::path lib_path;
+        std::string component_path = sect.get_entry("path");
+
+        typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+        boost::char_separator<char> sep(HPX_INI_PATH_DELIMITER);
+        tokenizer tokens(component_path, sep);
+        boost::system::error_code fsec;
+        for(tokenizer::iterator it = tokens.begin(); it != tokens.end(); ++it)
+        {
+            boost::filesystem::path dir = boost::filesystem::path(*it);
+            lib_path = dir / std::string(HPX_MAKE_DLL_STRING(component));
+            if(boost::filesystem::exists(lib_path, fsec))
+            {
+                break;
+            }
+            lib_path.clear();
+        }
+
+        if (lib_path.string().empty())
+            continue;       // didn't find this plugin
+
+        hpx::util::plugin::dll module(lib_path.string());
+
         // get the factory
         hpx::util::plugin::plugin_factory<
                 example::example_plugin_factory_base
-            > pf(module, "factory");
+            > pf(module, "example_factory");
 
-        // create the plugin factory object, if not disabled
-        std::shared_ptr<example::example_plugin_factory_base> factory (
-            pf.create(instance, glob_ini, plugin_ini, true));
+        try {
+            // create the plugin factory object, if not disabled
+            std::shared_ptr<example::example_plugin_factory_base> factory (
+                pf.create(instance, glob_ini, plugin_ini, true));
 
-        // use factory to create an instance of the plugin
-        std::shared_ptr<example::example_plugin_base> plugin(factory->create());
+            // use factory to create an instance of the plugin
+            std::shared_ptr<example::example_plugin_base> plugin(factory->create());
 
-        // now use plugin to do something useful
-        plugin->do_something_useful();
+            // now use plugin to do something useful
+            plugin->do_something_useful();
+        }
+        catch(...) {
+            // different type of factory (not "example_factory"), ignore here
+        }
     }
     return true;
 }
 
 int main(int argc, char* argv[])
 {
-    hpx::util::plugin::dll module;
-    hpx::util::section ini;
-
-    // load plugin registry, gather configuration data
-    load_registries(module, ini);
-
     // load plugins based on registry and configuration information
-    load_plugins(module, ini);
+    load_plugins(hpx::get_runtime().get_config());
 
     return 0;
 }

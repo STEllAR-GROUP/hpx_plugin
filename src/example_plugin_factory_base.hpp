@@ -69,8 +69,12 @@ namespace hpx { namespace util { namespace plugin
 #define HPX_REGISTER_EXAMPLE_PLUGIN_FACTORY_BASE(FactoryType, pluginname)     \
     HPX_PLUGIN_EXPORT(HPX_PLUGIN_PLUGIN_PREFIX,                               \
         hpx::plugins::plugin_factory_base, FactoryType,                       \
-        pluginname, factory)                                                  \
+        pluginname, example_factory)                                          \
 /**/
+
+#define HPX_REGISTER_EXAMPLE_PLUGIN_MODULE_DYNAMIC()                          \
+    HPX_PLUGIN_EXPORT_LIST(HPX_PLUGIN_PLUGIN_PREFIX, example_factory);        \
+    HPX_REGISTER_PLUGIN_REGISTRY_MODULE_DYNAMIC()                             \
 
 #endif
 
