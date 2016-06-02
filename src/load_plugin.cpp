@@ -113,7 +113,7 @@ bool load_plugins(hpx::util::section& ini)
         if (lib_path.string().empty())
             continue;       // didn't find this plugin
 
-        hpx::util::plugin::dll module(lib_path.string());
+        hpx::util::plugin::dll module(lib_path.string(), HPX_MANGLE_STRING(component));
 
         // get the factory
         hpx::util::plugin::plugin_factory<
