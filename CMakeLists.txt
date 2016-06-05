@@ -5,7 +5,7 @@
 
 # Find and include HPX settings
 if(NOT HPX_DIR)
-  message(FATAL "HPX_DIR not set, unable to find HPX!")
+  message(FATAL_ERROR "HPX_DIR not set, unable to find HPX!")
 endif()
 
 # Require a recent version of cmake
